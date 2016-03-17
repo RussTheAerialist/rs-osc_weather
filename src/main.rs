@@ -1,27 +1,27 @@
 #[macro_use]
 extern crate tinyosc;
-use std::fmt;
+use std::borrow::Cow;
 
 mod weather_provider;
 
-fn to_string(x : weather_provider::WeatherCondition) -> &'static str {
-  &(format!("{:?}", x))[..]
+fn to_string<'a>(x : &'a weather_provider::WeatherCondition) -> Cow<'a, str> {
+  Cow::Owned(format!("{:?}", x))
 }
 
-fn to_osc(address : &str, x : weather_provider::WeatherRecord) -> tinyosc::Message {
+fn to_osc<'a>(address : &'a str, x: weather_provider::WeatherRecord<'a>) -> tinyosc::Message<'a> {
   tinyosc::Message {
     path: address,
     arguments: vec![
-       tinyosc::Argument::s(&String::from(x.location)[..]),
+       tinyosc::Argument::s(&x.location),
        tinyosc::Argument::i(x.temperature),
-       tinyosc::Argument::s(to_string(x.condition))
     ]
   }
 }
 
 fn main() {
+    let weather = weather_provider::WeatherRecord::new();
     let msg = to_osc("/slots/weather/bellevue",
-      weather_provider::query("Bellevue, WA")
+      weather_provider::query(&weather, "Bellevue, WA")
     );
     println!("{:?}", msg.serialize());
 }
